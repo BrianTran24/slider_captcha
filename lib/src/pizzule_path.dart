@@ -20,7 +20,7 @@ class PuzzlePiecePainter extends CustomPainter {
   final PaintingStyle paintingStyle;
 
   @override
-  Future<void> paint(Canvas canvas, Size size) async {
+  void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()
       ..color = Colors.blue
       ..style = paintingStyle
