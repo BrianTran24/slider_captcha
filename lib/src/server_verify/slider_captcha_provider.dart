@@ -40,8 +40,8 @@ class SliderCaptchaClientProvider {
     required this.pieceBase64,
     required this.coordinatesY,
   }) {
-    puzzleUnit8List = Base64Decoder().convert(puzzleBase64);
-    pieceUnit8List = Base64Decoder().convert(pieceBase64);
+    puzzleUnit8List = base64Decode(puzzleBase64);
+    pieceUnit8List = base64Decode(pieceBase64);
   }
 
   ///This is the required function to be executed to initialize the values.

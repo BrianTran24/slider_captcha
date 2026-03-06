@@ -180,7 +180,7 @@ class _SliderCaptchaState extends State<SliderCaptcha>
     });
   }
 
-  _onDragUpdate(BuildContext context, DragUpdateDetails update) {
+  void _onDragUpdate(BuildContext context, DragUpdateDetails update) {
     if (isLock) return;
     RenderBox getBox = context.findRenderObject() as RenderBox;
     var local = getBox.globalToLocal(update.globalPosition);
@@ -205,11 +205,7 @@ class _SliderCaptchaState extends State<SliderCaptcha>
   @override
   void initState() {
     super.initState();
-    if (widget.controller == null) {
-      controller = SliderController();
-    } else {
-      controller = widget.controller!;
-    }
+    controller = widget.controller ?? SliderController();
 
     controller.create = create;
 
@@ -237,11 +233,9 @@ class _SliderCaptchaState extends State<SliderCaptcha>
     super.dispose();
   }
 
-  WidgetsBinding? _widgetsBinding() => WidgetsBinding.instance;
-
   @override
   void didChangeDependencies() {
-    _widgetsBinding()?.addPostFrameCallback((timeStamp) {
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       controller.create.call();
     });
     super.didChangeDependencies();
@@ -257,7 +251,7 @@ class _SliderCaptchaState extends State<SliderCaptcha>
     if (isLock) return;
     isLock = true;
 
-    if (_offsetMove < answerX + widget.threshold && _offsetMove > answerX - widget.threshold) {
+    if ((_offsetMove - answerX).abs() < widget.threshold) {
       await widget.onConfirm?.call(true);
     } else {
       await widget.onConfirm?.call(false);
@@ -312,7 +306,6 @@ class SliderCaptCha extends SingleChildRenderObjectWidget {
     renderObject.offsetY = offsetY;
     renderObject.colorCaptChar = colorCaptChar;
     renderObject.sizeCaptChar = sizeCaptChar;
-    renderObject.colorCaptChar = colorCaptChar;
     sliderController.create = renderObject.create;
     return renderObject;
   }
@@ -324,7 +317,6 @@ class SliderCaptCha extends SingleChildRenderObjectWidget {
     renderObject.offsetY = offsetY;
     renderObject.colorCaptChar = colorCaptChar;
     renderObject.sizeCaptChar = sizeCaptChar;
-    renderObject.colorCaptChar = colorCaptChar;
 
     super.updateRenderObject(context, renderObject);
   }
@@ -411,13 +403,6 @@ class _RenderTestSliderCaptChar extends RenderProxyBox {
 
   @override
   void performLayout() {
-    // WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-    //   /// tam fix
-    //   if (createX != 0 && createY != 0) return;
-    //   create();
-    //   markNeedsPaint();
-    // });
-
     super.performLayout();
   }
 

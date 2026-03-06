@@ -31,9 +31,8 @@ class _SliderCaptchaClientState extends State<SliderCaptchaClient>
 
   @override
   void initState() {
-    // TODO: implement initState
     titleSlider = widget.titleSlider ?? 'Slider to verify';
-    titleStyle = widget.titleStyle ?? TextStyle();
+    titleStyle = widget.titleStyle ?? const TextStyle();
     super.initState();
   }
 
@@ -41,7 +40,7 @@ class _SliderCaptchaClientState extends State<SliderCaptchaClient>
   Widget build(BuildContext context) {
     return FutureBuilder(
       future: widget.provider.init(context),
-      key: Key('FutureBuilder'),
+      key: const Key('FutureBuilder'),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
           return _SliderCaptchaComponent(
@@ -78,7 +77,7 @@ class _SliderCaptchaComponent extends StatefulWidget {
 
 class _SliderCaptchaComponentState extends State<_SliderCaptchaComponent>
     with SingleTickerProviderStateMixin {
-  Size sizeImage = Size(0, 0);
+  Size sizeImage = Size.zero;
 
   double offset = 0;
 
@@ -109,7 +108,6 @@ class _SliderCaptchaComponentState extends State<_SliderCaptchaComponent>
 
   @override
   void dispose() {
-    // TODO: implement dispose
     animationController.dispose();
     super.dispose();
   }
@@ -161,7 +159,7 @@ class _SliderCaptchaComponentState extends State<_SliderCaptchaComponent>
                 onHorizontalDragStart: (detail) =>
                     _onDragStart(context, detail),
                 onHorizontalDragUpdate: (DragUpdateDetails update) {
-                  _onDragUpdate(context, update, setState);
+                  _onDragUpdate(context, update);
                 },
                 onHorizontalDragEnd: (DragEndDetails detail) {
                   checkAnswer();
@@ -185,20 +183,21 @@ class _SliderCaptchaComponentState extends State<_SliderCaptchaComponent>
         ),
       );
 
-  void _onDragUpdate(BuildContext context, DragUpdateDetails update,
-      void Function(void Function()) setState) {
+  void _onDragUpdate(BuildContext context, DragUpdateDetails update) {
     RenderBox getBox = context.findRenderObject() as RenderBox;
     var local = getBox.globalToLocal(update.globalPosition);
 
     if (local.dx < 0) {
-      offset = 0;
-      setState(() {});
+      setState(() {
+        offset = 0;
+      });
       return;
     }
 
     if (local.dx > getBox.size.width) {
-      offset = getBox.size.width - 50;
-      setState(() {});
+      setState(() {
+        offset = getBox.size.width - 50;
+      });
       return;
     }
 
@@ -207,8 +206,7 @@ class _SliderCaptchaComponentState extends State<_SliderCaptchaComponent>
     });
   }
 
-  _onDragStart(BuildContext context, DragStartDetails start) {
-    // if (isLock) return;
+  void _onDragStart(BuildContext context, DragStartDetails start) {
     RenderBox getBox = context.findRenderObject() as RenderBox;
 
     var local = getBox.globalToLocal(start.globalPosition);
@@ -218,19 +216,10 @@ class _SliderCaptchaComponentState extends State<_SliderCaptchaComponent>
     });
   }
 
-  void checkAnswer() async {
+  Future<void> checkAnswer() async {
     var imageSize = widget.provider.puzzleSize.width / widget.provider.ratio;
     await widget.onConfirm.call(offset / imageSize);
     animationController.forward();
-    // if (isLock) return;
-    // isLock = true;
-    //
-    // if (_offsetMove < answerX + 10 && _offsetMove > answerX - 10) {
-    //   await widget.onConfirm?.call(true);
-    // } else {
-    //   await widget.onConfirm?.call(false);
-    // }
-    // isLock = false;
   }
 }
 
@@ -250,9 +239,7 @@ class _SliderCaptchaRenderObject extends MultiChildRenderObjectWidget {
 
   @override
   RenderObject createRenderObject(BuildContext context) {
-    var renderObject = _RenderTestSliderCaptChar(percent, offsetMove);
-    renderObject.offsetMove = offsetMove;
-    return renderObject;
+    return _RenderTestSliderCaptChar(percent, offsetMove);
   }
 
   @override
@@ -293,11 +280,10 @@ class _RenderTestSliderCaptChar extends RenderBox
   void performLayout() {
     final deflatedConstraints = constraints.deflate(EdgeInsets.zero);
 
-    // var pice = childAfter(firstChild!);
     for (var child = firstChild; child != null; child = childAfter(child)) {
       child.layout(deflatedConstraints, parentUsesSize: true);
     }
-    size = Size(firstChild?.size.height ?? 0, firstChild?.size.width ?? 0);
+    size = Size(firstChild?.size.width ?? 0, firstChild?.size.height ?? 0);
   }
 
   @override
