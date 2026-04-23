@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../pizzule_path.dart';
+import '../../utils/movement_data.dart';
 
 class SliderController {
   late Offset? Function() create;
@@ -24,9 +25,12 @@ class SliderCaptcha extends StatefulWidget {
     this.slideContainerDecoration,
     this.icon,
     this.threshold = 10,
+    this.maxAttempts = 5,
+    this.onBehaviorData,
     Key? key,
   })  : assert(0 <= borderImager && borderImager <= 5),
         assert(0 <= threshold),
+        assert(maxAttempts > 0),
         super(key: key);
 
   final Widget image;
@@ -60,6 +64,15 @@ class SliderCaptcha extends StatefulWidget {
   /// allowable error
   final double threshold;
 
+  /// Maximum number of failed attempts before the captcha resets automatically.
+  /// Defaults to 5.
+  final int maxAttempts;
+
+  /// Optional callback that receives the full [SliderMovementData] collected
+  /// during the drag gesture. Use this to forward the trail to your server for
+  /// bot-detection heuristics.
+  final void Function(SliderMovementData data)? onBehaviorData;
+
   @override
   State<SliderCaptcha> createState() => _SliderCaptchaState();
 }
@@ -73,6 +86,15 @@ class _SliderCaptchaState extends State<SliderCaptcha>
   double answerX = 0;
 
   double answerY = 0;
+
+  /// Current number of consecutive failed attempts.
+  int _failedAttempts = 0;
+
+  /// Drag trail accumulated during the current gesture.
+  final List<SliderDragPoint> _dragTrail = [];
+
+  /// Timestamp of the first drag event in the current gesture.
+  int? _dragStartMs;
 
   /// Khi [confirm] đang thực thiện thì lock =true -> Không cho controller trược
   /// nữa
@@ -175,6 +197,10 @@ class _SliderCaptchaState extends State<SliderCaptcha>
 
     var local = getBox.globalToLocal(start.globalPosition);
 
+    _dragTrail.clear();
+    _dragStartMs = DateTime.now().millisecondsSinceEpoch;
+    _dragTrail.add(SliderDragPoint(x: local.dx, timestampMs: _dragStartMs!));
+
     setState(() {
       _offsetMove = local.dx - heightSliderBar / 2;
     });
@@ -184,6 +210,11 @@ class _SliderCaptchaState extends State<SliderCaptcha>
     if (isLock) return;
     RenderBox getBox = context.findRenderObject() as RenderBox;
     var local = getBox.globalToLocal(update.globalPosition);
+
+    _dragTrail.add(SliderDragPoint(
+      x: local.dx,
+      timestampMs: DateTime.now().millisecondsSinceEpoch,
+    ));
 
     if (local.dx < 0) {
       _offsetMove = 0;
@@ -251,11 +282,34 @@ class _SliderCaptchaState extends State<SliderCaptcha>
     if (isLock) return;
     isLock = true;
 
-    if ((_offsetMove - answerX).abs() < widget.threshold) {
-      await widget.onConfirm?.call(true);
+    final endMs = DateTime.now().millisecondsSinceEpoch;
+    final startMs = _dragStartMs ?? endMs;
+    final movementData = SliderMovementData(
+      trail: List.unmodifiable(_dragTrail),
+      totalDurationMs: endMs - startMs,
+    );
+
+    // Fire the optional behaviour callback so callers can forward the
+    // trail to their server for independent bot-detection analysis.
+    widget.onBehaviorData?.call(movementData);
+
+    final correct = (_offsetMove - answerX).abs() < widget.threshold;
+
+    if (!correct) {
+      _failedAttempts++;
+      if (_failedAttempts >= widget.maxAttempts) {
+        // Force a new captcha after too many consecutive failures.
+        _failedAttempts = 0;
+        await widget.onConfirm?.call(false);
+        isLock = false;
+        create();
+        return;
+      }
     } else {
-      await widget.onConfirm?.call(false);
+      _failedAttempts = 0;
     }
+
+    await widget.onConfirm?.call(correct);
     isLock = false;
   }
 
@@ -411,10 +465,11 @@ class _RenderTestSliderCaptChar extends RenderProxyBox {
     if (size == Size.zero) {
       return null;
     }
+    final rng = Random.secure();
     createX = sizeCaptChar +
-        Random().nextInt((size.width - 2.5 * sizeCaptChar).toInt());
+        rng.nextInt((size.width - 2.5 * sizeCaptChar).toInt());
 
-    createY = 0.0 + Random().nextInt((size.height - sizeCaptChar).toInt());
+    createY = 0.0 + rng.nextInt((size.height - sizeCaptChar).toInt());
 
     markNeedsPaint();
 

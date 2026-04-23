@@ -28,6 +28,7 @@ class _SliderCaptchaServerVerifyState extends State<SliderCaptchaServerVerify> {
                   puzzleBase64: value.captcha?.puzzleImage ?? '',
                   pieceBase64: value.captcha?.pieceImage ?? '',
                   coordinatesY: value.captcha?.y ?? 0,
+                  captchaId: value.captcha?.requestID,
                 ),
                 onConfirm: (value) async {
                   /// Can you verify captcha at here

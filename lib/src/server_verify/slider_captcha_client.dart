@@ -8,6 +8,7 @@ class SliderCaptchaClient extends StatefulWidget {
       required this.onConfirm,
       this.titleSlider,
       this.titleStyle,
+      this.onBehaviorData,
       Key? key})
       : super(key: key);
 
@@ -18,6 +19,10 @@ class SliderCaptchaClient extends StatefulWidget {
   final TextStyle? titleStyle;
 
   final Future<void> Function(double value) onConfirm;
+
+  /// Optional callback that receives the full [SliderMovementData] collected
+  /// during the drag gesture. Forward this to your server for bot-detection.
+  final void Function(SliderMovementData data)? onBehaviorData;
 
   @override
   State<SliderCaptchaClient> createState() => _SliderCaptchaClientState();
@@ -48,6 +53,7 @@ class _SliderCaptchaClientState extends State<SliderCaptchaClient>
             titleSlider,
             titleStyle,
             widget.onConfirm,
+            onBehaviorData: widget.onBehaviorData,
           );
         }
         return SizedBox();
@@ -59,7 +65,7 @@ class _SliderCaptchaClientState extends State<SliderCaptchaClient>
 class _SliderCaptchaComponent extends StatefulWidget {
   const _SliderCaptchaComponent(
       this.provider, this.title, this.titleStyle, this.onConfirm,
-      {Key? key})
+      {this.onBehaviorData, Key? key})
       : super(key: key);
 
   final SliderCaptchaClientProvider provider;
@@ -69,6 +75,8 @@ class _SliderCaptchaComponent extends StatefulWidget {
   final TextStyle titleStyle;
 
   final Future<void> Function(double value) onConfirm;
+
+  final void Function(SliderMovementData data)? onBehaviorData;
 
   @override
   State<_SliderCaptchaComponent> createState() =>
@@ -80,6 +88,12 @@ class _SliderCaptchaComponentState extends State<_SliderCaptchaComponent>
   Size sizeImage = Size.zero;
 
   double offset = 0;
+
+  /// Drag trail accumulated during the current gesture.
+  final List<SliderDragPoint> _dragTrail = [];
+
+  /// Timestamp of the first drag event in the current gesture (ms).
+  int? _dragStartMs;
 
   late Animation<double> animation;
 
@@ -187,6 +201,11 @@ class _SliderCaptchaComponentState extends State<_SliderCaptchaComponent>
     RenderBox getBox = context.findRenderObject() as RenderBox;
     var local = getBox.globalToLocal(update.globalPosition);
 
+    _dragTrail.add(SliderDragPoint(
+      x: local.dx,
+      timestampMs: DateTime.now().millisecondsSinceEpoch,
+    ));
+
     if (local.dx < 0) {
       setState(() {
         offset = 0;
@@ -211,12 +230,25 @@ class _SliderCaptchaComponentState extends State<_SliderCaptchaComponent>
 
     var local = getBox.globalToLocal(start.globalPosition);
 
+    _dragTrail.clear();
+    _dragStartMs = DateTime.now().millisecondsSinceEpoch;
+    _dragTrail.add(SliderDragPoint(x: local.dx, timestampMs: _dragStartMs!));
+
     setState(() {
       offset = local.dx - 50 / 2;
     });
   }
 
   Future<void> checkAnswer() async {
+    final endMs = DateTime.now().millisecondsSinceEpoch;
+    final startMs = _dragStartMs ?? endMs;
+    final movementData = SliderMovementData(
+      trail: List.unmodifiable(_dragTrail),
+      totalDurationMs: endMs - startMs,
+    );
+
+    widget.onBehaviorData?.call(movementData);
+
     var imageSize = widget.provider.puzzleSize.width / widget.provider.ratio;
     await widget.onConfirm.call(offset / imageSize);
     animationController.forward();
