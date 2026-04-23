@@ -34,11 +34,17 @@ class SliderCaptchaClientProvider {
   ///Y coordinate of the puzzle piece.
   final double coordinatesY;
 
+  /// Optional session identifier returned by the server when the captcha was
+  /// generated.  Include this in your verification request so the server can
+  /// invalidate the token after a single use and prevent replay attacks.
+  final String? captchaId;
+
   /// Provides Image information from the original base64 data
   SliderCaptchaClientProvider({
     required this.puzzleBase64,
     required this.pieceBase64,
     required this.coordinatesY,
+    this.captchaId,
   }) {
     puzzleUnit8List = base64Decode(puzzleBase64);
     pieceUnit8List = base64Decode(pieceBase64);
