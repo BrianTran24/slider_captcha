@@ -53,7 +53,7 @@ class _SliderCaptchaClientState extends State<SliderCaptchaClient>
             titleSlider,
             titleStyle,
             widget.onConfirm,
-            widget.onBehaviorData,
+            onBehaviorData: widget.onBehaviorData,
           );
         }
         return SizedBox();
@@ -65,7 +65,7 @@ class _SliderCaptchaClientState extends State<SliderCaptchaClient>
 class _SliderCaptchaComponent extends StatefulWidget {
   const _SliderCaptchaComponent(
       this.provider, this.title, this.titleStyle, this.onConfirm,
-      [this.onBehaviorData, Key? key])
+      {this.onBehaviorData, Key? key})
       : super(key: key);
 
   final SliderCaptchaClientProvider provider;

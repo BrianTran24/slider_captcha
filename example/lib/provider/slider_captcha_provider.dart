@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import '../model/captcha_model.dart';
 
 class SliderCaptchaProvider extends ChangeNotifier {
-  final _service = SliderCaptchaService();
+  final _service = SliderCaptchaService(baseUrl: 'https://localhost:18080');
   late CaptchaModel? captcha;
 
   bool isLoading = false;

@@ -25,10 +25,16 @@ class Solution {
 }
 
 class SliderCaptchaService {
-  /// Base URL of the captcha server. Must use HTTPS in production.
+  /// Base URL of the captcha server. Must use the HTTPS scheme.
+  ///
+  /// Example: `'https://api.example.com'`
   final String baseUrl;
 
-  SliderCaptchaService({this.baseUrl = 'https://localhost:18080'}) {
+  /// Creates a [SliderCaptchaService] that communicates with [baseUrl].
+  ///
+  /// Throws an [ArgumentError] immediately if [baseUrl] does not use HTTPS,
+  /// preventing accidental plain-HTTP usage in production.
+  SliderCaptchaService({required this.baseUrl}) {
     _assertHttps(baseUrl);
   }
 

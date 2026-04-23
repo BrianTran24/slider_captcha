@@ -63,8 +63,9 @@ class SliderMovementData {
             .reduce((a, b) => a + b) /
         velocities.length;
 
-    // Any non-trivial variance indicates non-uniform speed.
-    return variance > 0;
+    // Use an epsilon threshold to avoid floating-point false negatives when
+    // velocities are nearly (but not exactly) identical.
+    return variance > 1e-10;
   }
 
   /// Serialises the full trail to a JSON-encodable list, suitable for
