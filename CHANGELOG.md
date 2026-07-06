@@ -71,3 +71,19 @@ TODO
 
 ## 1.0.2
 - Feat: Acceptable Error Configuration
+
+## 1.1.0
+- **Feat: Circle Mode Support**
+  - Added `SliderCaptchaMode.circle` for circular image rotation verification.
+  - Supported in both `SliderCaptcha` (Client) and `SliderCaptchaClient` (Server).
+- **Feat: Customizable Captcha Size**
+  - Added `captchaSize` parameter to control the size of the puzzle piece or circle.
+- **Feat: UI Customization**
+  - Added `imageToBarPadding` to adjust spacing between the image and slider bar.
+  - Added `slideContainerDecoration` for custom slider button styling.
+  - Added `icon` parameter for the slider button.
+  - Added `titleStyle` for slider bar text customization.
+- **Enhancements**
+  - Added `threshold` parameter to `SliderCaptcha` for configurable error margins.
+  - Improved slider locking mechanism during verification.
+  - Added automatic reset animation on verification failure.

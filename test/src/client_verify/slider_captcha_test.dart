@@ -5,7 +5,6 @@ import 'package:slider_captcha/slider_captcha.dart';
 void main() {
   group('Slider Captcha (Client Verify)', () {
     testWidgets('Test if SliderCaptcha renders correctly', (tester) async {
-      bool? isConfirmed;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -15,9 +14,7 @@ void main() {
                 height: 200,
                 color: Colors.grey,
               ),
-              onConfirm: (value) async {
-                isConfirmed = value;
-              },
+              onConfirm: (value) async {},
             ),
           ),
         ),

@@ -26,7 +26,6 @@ class SliderCaptcha extends StatefulWidget {
     this.icon,
     this.threshold = 10,
     this.mode = SliderCaptchaMode.puzzle,
-    this.captchaSize = 40,
     Key? key,
   })  : assert(0 <= borderImager && borderImager <= 5),
         assert(0 <= threshold),
@@ -447,7 +446,7 @@ class _RenderTestSliderCaptChar extends RenderProxyBox {
         radius,
         paint
           ..style = PaintingStyle.fill
-          ..color = colorCaptChar.withOpacity(0.5),
+          ..color = colorCaptChar.withValues(alpha: 0.5),
       );
 
       // Rotation calculation
@@ -481,11 +480,6 @@ class _RenderTestSliderCaptChar extends RenderProxyBox {
           ..color = colorCaptChar,
       );
     }
-  }
-
-  @override
-  void performLayout() {
-    super.performLayout();
   }
 
   /// Hàm khởi tạo kết quả của khối bloc
