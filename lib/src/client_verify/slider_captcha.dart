@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:slider_captcha/slider_captcha.dart';
 
 import '../pizzule_path.dart';
 
@@ -24,6 +25,8 @@ class SliderCaptcha extends StatefulWidget {
     this.slideContainerDecoration,
     this.icon,
     this.threshold = 10,
+    this.mode = SliderCaptchaMode.puzzle,
+    this.captchaSize = 40,
     Key? key,
   })  : assert(0 <= borderImager && borderImager <= 5),
         assert(0 <= threshold),
@@ -60,6 +63,8 @@ class SliderCaptcha extends StatefulWidget {
   /// allowable error
   final double threshold;
 
+  final SliderCaptchaMode mode;
+
   @override
   State<SliderCaptcha> createState() => _SliderCaptchaState();
 }
@@ -73,6 +78,8 @@ class _SliderCaptchaState extends State<SliderCaptcha>
   double answerX = 0;
 
   double answerY = 0;
+
+  double answerAngle = 0;
 
   /// Khi [confirm] đang thực thiện thì lock =true -> Không cho controller trược
   /// nữa
@@ -103,6 +110,9 @@ class _SliderCaptchaState extends State<SliderCaptcha>
                 answerY,
                 colorCaptChar: widget.colorCaptChar,
                 sliderController: _controller,
+                mode: widget.mode,
+                answerAngle: answerAngle,
+                sizeCaptChar: widget.captchaSize,
               ),
             ),
           ),
@@ -251,7 +261,16 @@ class _SliderCaptchaState extends State<SliderCaptcha>
     if (isLock) return;
     isLock = true;
 
-    if ((_offsetMove - answerX).abs() < widget.threshold) {
+    bool isCorrect = false;
+    if (widget.mode == SliderCaptchaMode.puzzle) {
+      isCorrect = (_offsetMove - answerX).abs() < widget.threshold;
+    } else {
+      RenderBox getBox = context.findRenderObject() as RenderBox;
+      double rotationAngle = (_offsetMove / (getBox.size.width - heightSliderBar)) * 360;
+      isCorrect = (rotationAngle - answerAngle).abs() < widget.threshold;
+    }
+
+    if (isCorrect) {
       await widget.onConfirm?.call(true);
     } else {
       await widget.onConfirm?.call(false);
@@ -264,6 +283,9 @@ class _SliderCaptchaState extends State<SliderCaptcha>
       Offset? offset = _controller.create.call();
       answerX = offset?.dx ?? 0;
       answerY = offset?.dy ?? 0;
+      if (widget.mode == SliderCaptchaMode.circle) {
+        answerAngle = Random().nextInt(360).toDouble();
+      }
     });
     return null;
   }
@@ -287,6 +309,10 @@ class SliderCaptCha extends SingleChildRenderObjectWidget {
   /// Kích thước của captchar
   final double sizeCaptChar;
 
+  final SliderCaptchaMode mode;
+
+  final double answerAngle;
+
   final SliderController sliderController;
 
   const SliderCaptCha(
@@ -295,6 +321,8 @@ class SliderCaptCha extends SingleChildRenderObjectWidget {
     this.offsetY, {
     this.sizeCaptChar = 40,
     this.colorCaptChar = Colors.blue,
+    this.mode = SliderCaptchaMode.puzzle,
+    this.answerAngle = 0,
     required this.sliderController,
     Key? key,
   }) : super(key: key, child: image);
@@ -306,6 +334,8 @@ class SliderCaptCha extends SingleChildRenderObjectWidget {
     renderObject.offsetY = offsetY;
     renderObject.colorCaptChar = colorCaptChar;
     renderObject.sizeCaptChar = sizeCaptChar;
+    renderObject.mode = mode;
+    renderObject.answerAngle = answerAngle;
     sliderController.create = renderObject.create;
     return renderObject;
   }
@@ -317,6 +347,8 @@ class SliderCaptCha extends SingleChildRenderObjectWidget {
     renderObject.offsetY = offsetY;
     renderObject.colorCaptChar = colorCaptChar;
     renderObject.sizeCaptChar = sizeCaptChar;
+    renderObject.mode = mode;
+    renderObject.answerAngle = answerAngle;
 
     super.updateRenderObject(context, renderObject);
   }
@@ -344,6 +376,10 @@ class _RenderTestSliderCaptChar extends RenderProxyBox {
   /// màu sắc của khối bloc
   Color colorCaptChar = Colors.black;
 
+  SliderCaptchaMode mode = SliderCaptchaMode.puzzle;
+
+  double answerAngle = 0;
+
   @override
   void paint(PaintingContext context, Offset offset) {
     if (child == null) return;
@@ -360,45 +396,91 @@ class _RenderTestSliderCaptChar extends RenderProxyBox {
       ..color = colorCaptChar
       ..strokeWidth = strokeWidth;
 
-    if (createX == 0 && createY == 0) return;
+    if (mode == SliderCaptchaMode.puzzle) {
+      if (createX == 0 && createY == 0) return;
 
-    context.canvas.drawPath(
-      getPiecePathCustom(
-        size,
-        strokeWidth + offset.dx + createX.toDouble(),
-        offset.dy + createY.toDouble(),
-        sizeCaptChar,
-      ),
-      paint..style = PaintingStyle.fill,
-    );
+      context.canvas.drawPath(
+        getPiecePathCustom(
+          size,
+          strokeWidth + offset.dx + createX.toDouble(),
+          offset.dy + createY.toDouble(),
+          sizeCaptChar,
+        ),
+        paint..style = PaintingStyle.fill,
+      );
 
-    context.canvas.drawPath(
-      getPiecePathCustom(
-        Size(size.width - strokeWidth, size.height - strokeWidth),
-        strokeWidth + offset.dx + offsetX,
-        offset.dy + createY,
-        sizeCaptChar,
-      ),
-      paint..style = PaintingStyle.stroke,
-    );
+      context.canvas.drawPath(
+        getPiecePathCustom(
+          Size(size.width - strokeWidth, size.height - strokeWidth),
+          strokeWidth + offset.dx + offsetX,
+          offset.dy + createY,
+          sizeCaptChar,
+        ),
+        paint..style = PaintingStyle.stroke,
+      );
 
-    layer = context.pushClipPath(
-      needsCompositing,
+      layer = context.pushClipPath(
+        needsCompositing,
 
-      /// Move về đầu [-create] và trược theo offsetX
-      Offset(-createX + offsetX + offset.dx + strokeWidth, offset.dy),
-      Offset.zero & size,
-      getPiecePathCustom(
-        size,
-        createX,
-        createY.toDouble(),
-        sizeCaptChar,
-      ),
-      (context, offset) {
-        context.paintChild(child!, offset);
-      },
-      oldLayer: layer as ClipPathLayer?,
-    );
+        /// Move về đầu [-create] và trược theo offsetX
+        Offset(-createX + offsetX + offset.dx + strokeWidth, offset.dy),
+        Offset.zero & size,
+        getPiecePathCustom(
+          size,
+          createX,
+          createY.toDouble(),
+          sizeCaptChar,
+        ),
+        (context, offset) {
+          context.paintChild(child!, offset);
+        },
+        oldLayer: layer as ClipPathLayer?,
+      );
+    } else {
+      // Circle mode
+      double radius = sizeCaptChar;
+      Offset center = Offset(size.width / 2, size.height / 2);
+
+      // Draw the hole (shadow/guide)
+      context.canvas.drawCircle(
+        center + offset,
+        radius,
+        paint
+          ..style = PaintingStyle.fill
+          ..color = colorCaptChar.withOpacity(0.5),
+      );
+
+      // Rotation calculation
+      // offsetX ranges from 0 to (width - 50)
+      double maxScroll = size.width - 50; // Approximated, might need refinement
+      double rotationAngle = (offsetX / maxScroll) * 360;
+      double currentRotation = (rotationAngle - answerAngle) * pi / 180;
+
+      context.canvas.save();
+      context.canvas.translate(center.dx + offset.dx, center.dy + offset.dy);
+      context.canvas.rotate(currentRotation);
+      context.canvas.translate(-(center.dx + offset.dx), -(center.dy + offset.dy));
+
+      layer = context.pushClipPath(
+        needsCompositing,
+        offset,
+        Offset.zero & size,
+        Path()..addOval(Rect.fromCircle(center: center, radius: radius)),
+        (context, offset) {
+          context.paintChild(child!, offset);
+        },
+        oldLayer: layer as ClipPathLayer?,
+      );
+      context.canvas.restore();
+
+      context.canvas.drawCircle(
+        center + offset,
+        radius,
+        paint
+          ..style = PaintingStyle.stroke
+          ..color = colorCaptChar,
+      );
+    }
   }
 
   @override
@@ -411,10 +493,16 @@ class _RenderTestSliderCaptChar extends RenderProxyBox {
     if (size == Size.zero) {
       return null;
     }
-    createX = sizeCaptChar +
-        Random().nextInt((size.width - 2.5 * sizeCaptChar).toInt());
 
-    createY = 0.0 + Random().nextInt((size.height - sizeCaptChar).toInt());
+    if (mode == SliderCaptchaMode.puzzle) {
+      createX = sizeCaptChar +
+          Random().nextInt((size.width - 2.5 * sizeCaptChar).toInt());
+
+      createY = 0.0 + Random().nextInt((size.height - sizeCaptChar).toInt());
+    } else {
+      // For circle mode, we just need to trigger a repaint with new answerAngle
+      // answerAngle is handled in _SliderCaptchaState.create
+    }
 
     markNeedsPaint();
 
