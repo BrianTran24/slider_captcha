@@ -50,7 +50,7 @@ class _SliderCaptchaClientState extends State<SliderCaptchaClient>
             widget.onConfirm,
           );
         }
-        return SizedBox();
+        return const SizedBox();
       },
     );
   }
@@ -116,12 +116,14 @@ class _SliderCaptchaComponentState extends State<_SliderCaptchaComponent>
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _SliderCaptchaRenderObject(
-          widget.provider.puzzleImage!,
-          widget.provider.pieceImage!,
-          widget.provider.coordinatesY,
-          offset,
-        ),
+        if (widget.provider.puzzleImage != null &&
+            widget.provider.pieceImage != null)
+          _SliderCaptchaRenderObject(
+            widget.provider.puzzleImage!,
+            widget.provider.pieceImage!,
+            widget.provider.coordinatesY,
+            offset,
+          ),
         sliderBar(),
       ],
     );
