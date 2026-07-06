@@ -8,10 +8,13 @@ class SliderCaptchaClient extends StatefulWidget {
       required this.onConfirm,
       this.titleSlider,
       this.titleStyle,
+      this.mode = SliderCaptchaMode.puzzle,
       Key? key})
       : super(key: key);
 
   final SliderCaptchaClientProvider provider;
+
+  final SliderCaptchaMode mode;
 
   final String? titleSlider;
 
@@ -48,6 +51,7 @@ class _SliderCaptchaClientState extends State<SliderCaptchaClient>
             titleSlider,
             titleStyle,
             widget.onConfirm,
+            widget.mode,
           );
         }
         return const SizedBox();
@@ -58,7 +62,7 @@ class _SliderCaptchaClientState extends State<SliderCaptchaClient>
 
 class _SliderCaptchaComponent extends StatefulWidget {
   const _SliderCaptchaComponent(
-      this.provider, this.title, this.titleStyle, this.onConfirm,
+      this.provider, this.title, this.titleStyle, this.onConfirm, this.mode,
       {Key? key})
       : super(key: key);
 
@@ -69,6 +73,8 @@ class _SliderCaptchaComponent extends StatefulWidget {
   final TextStyle titleStyle;
 
   final Future<void> Function(double value) onConfirm;
+
+  final SliderCaptchaMode mode;
 
   @override
   State<_SliderCaptchaComponent> createState() =>
@@ -123,6 +129,7 @@ class _SliderCaptchaComponentState extends State<_SliderCaptchaComponent>
             widget.provider.pieceImage!,
             widget.provider.coordinatesY,
             offset,
+            widget.mode,
           ),
         sliderBar(),
       ],
@@ -219,8 +226,16 @@ class _SliderCaptchaComponentState extends State<_SliderCaptchaComponent>
   }
 
   Future<void> checkAnswer() async {
-    var imageSize = widget.provider.puzzleSize.width / widget.provider.ratio;
-    await widget.onConfirm.call(offset / imageSize);
+    double value;
+    if (widget.mode == SliderCaptchaMode.puzzle) {
+      var imageSize = widget.provider.puzzleSize.width / widget.provider.ratio;
+      value = offset / imageSize;
+    } else {
+      RenderBox getBox = context.findRenderObject() as RenderBox;
+      // Map offset to 0..1 (representing 0..360 degrees)
+      value = offset / (getBox.size.width - 50);
+    }
+    await widget.onConfirm.call(value);
     animationController.forward();
   }
 }
@@ -230,24 +245,27 @@ class _SliderCaptchaRenderObject extends MultiChildRenderObjectWidget {
   final Image piece;
   final double percent;
   final double offsetMove;
+  final SliderCaptchaMode mode;
 
   _SliderCaptchaRenderObject(
     this.image,
     this.piece,
     this.percent,
-    this.offsetMove, {
+    this.offsetMove,
+    this.mode, {
     Key? key,
   }) : super(children: [image, piece], key: key);
 
   @override
   RenderObject createRenderObject(BuildContext context) {
-    return _RenderTestSliderCaptChar(percent, offsetMove);
+    return _RenderTestSliderCaptChar(percent, offsetMove, mode);
   }
 
   @override
   void updateRenderObject(
       BuildContext context, covariant RenderObject renderObject) {
     (renderObject as _RenderTestSliderCaptChar).offsetMove = offsetMove;
+    renderObject.mode = mode;
   }
 }
 
@@ -261,7 +279,9 @@ class _RenderTestSliderCaptChar extends RenderBox
 
   double offsetMove = 0;
 
-  _RenderTestSliderCaptChar(this.percent, this.offsetMove);
+  SliderCaptchaMode mode;
+
+  _RenderTestSliderCaptChar(this.percent, this.offsetMove, this.mode);
 
   @override
   void paint(PaintingContext context, Offset offset) {
@@ -271,11 +291,35 @@ class _RenderTestSliderCaptChar extends RenderBox
     if (piece == null) return;
     context.paintChild(firstChild!, offset);
 
-    context.paintChild(
-      piece,
-      Offset(offset.dx + offsetMove,
-          offset.dy + (firstChild?.size.height ?? 0) * percent),
-    );
+    if (mode == SliderCaptchaMode.puzzle) {
+      context.paintChild(
+        piece,
+        Offset(offset.dx + offsetMove,
+            offset.dy + (firstChild?.size.height ?? 0) * percent),
+      );
+    } else {
+      // Circle mode rotation
+      // Map offsetMove to rotation angle (0 to 360)
+      double maxScroll = size.width - 50;
+      double rotationAngle = (offsetMove / maxScroll) * 360;
+
+      context.canvas.save();
+      // Center of the background image
+      Offset center = Offset(size.width / 2, size.height / 2);
+
+      context.canvas.translate(center.dx + offset.dx, center.dy + offset.dy);
+      context.canvas.rotate(rotationAngle * 3.141592653589793 / 180);
+      context.canvas.translate(-(center.dx + offset.dx), -(center.dy + offset.dy));
+
+      // Paint piece at center - No changes needed here as the piece 
+      // size is controlled by the image provided in the provider.
+      context.paintChild(
+        piece,
+        Offset(offset.dx + (size.width - piece.size.width) / 2,
+            offset.dy + (size.height - piece.size.height) / 2),
+      );
+      context.canvas.restore();
+    }
   }
 
   @override
